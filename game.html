@@ -12,7 +12,7 @@
         }
 
         body {
-            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 100%);
+            background: radial-gradient(ellipse at center, #2d5a27 0%, #1a3d1a 100%);
             font-family: 'Courier New', monospace;
             overflow: hidden;
             display: flex;
@@ -46,11 +46,12 @@
         }
 
         #gameCanvas {
-            border: 4px solid #333;
-            background: linear-gradient(180deg, #FFB6C1 0%, #87CEEB 30%, #98FB98 100%);
+            border: 4px solid #2d4a2d;
+            background: linear-gradient(180deg, #87CEEB 0%, #98FB98 20%, #228B22 60%, #006400 100%);
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
+            box-shadow: 0 0 30px rgba(0, 100, 0, 0.5);
         }
 
         .controls {
@@ -351,21 +352,53 @@
         }
 
         function render() {
-            // Clear canvas
-            ctx.fillStyle = 'rgba(135, 206, 235, 0.3)';
+            // Clear canvas with forest background gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB'); // Sky blue
+            gradient.addColorStop(0.3, '#98FB98'); // Light green
+            gradient.addColorStop(0.7, '#228B22'); // Forest green
+            gradient.addColorStop(1, '#006400'); // Dark green
+            ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw platforms
+            // Draw forest background elements
+            drawForestBackground();
+            
+            // Draw platforms with more natural forest look
             for (let platform of gameState.platforms) {
                 const adjustedY = platform.y - gameState.camera.y;
                 if (adjustedY > -platform.height && adjustedY < canvas.height + platform.height) {
+                    // Main platform
                     ctx.fillStyle = platform.color;
                     ctx.fillRect(platform.x, adjustedY, platform.width, platform.height);
                     
-                    // Platform border
+                    // Add moss/grass on top
+                    ctx.fillStyle = '#32CD32';
+                    ctx.fillRect(platform.x, adjustedY, platform.width, 3);
+                    
+                    // Add small grass details
+                    for (let i = platform.x; i < platform.x + platform.width; i += 8) {
+                        if (Math.random() > 0.7) {
+                            ctx.fillStyle = '#90EE90';
+                            ctx.fillRect(i, adjustedY - 2, 2, 4);
+                        }
+                    }
+                    
+                    // Platform border with wood texture
                     ctx.strokeStyle = '#654321';
                     ctx.lineWidth = 2;
                     ctx.strokeRect(platform.x, adjustedY, platform.width, platform.height);
+                    
+                    // Wood grain lines
+                    ctx.strokeStyle = '#8B4513';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < 3; i++) {
+                        const lineY = adjustedY + (platform.height / 4) * (i + 1);
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + 2, lineY);
+                        ctx.lineTo(platform.x + platform.width - 2, lineY);
+                        ctx.stroke();
+                    }
                 }
             }
             
@@ -375,23 +408,161 @@
             if (adjustedPrincessY > -princess.height && adjustedPrincessY < canvas.height + princess.height) {
                 drawPixelCharacter(princess.x, adjustedPrincessY, princess.color, false);
                 
-                // Heart above princess
-                ctx.fillStyle = '#FF1493';
-                ctx.fillRect(princess.x + 15, adjustedPrincessY - 15, 4, 4);
-                ctx.fillRect(princess.x + 21, adjustedPrincessY - 15, 4, 4);
-                ctx.fillRect(princess.x + 13, adjustedPrincessY - 11, 8, 4);
-                ctx.fillRect(princess.x + 15, adjustedPrincessY - 7, 4, 4);
+                // Enhanced heart effect
+                drawFloatingHearts(princess.x + 20, adjustedPrincessY - 20);
+                
+                // Magical sparkles around princess
+                for (let i = 0; i < 8; i++) {
+                    const sparkleX = princess.x + Math.sin(Date.now() * 0.01 + i) * 30;
+                    const sparkleY = adjustedPrincessY + Math.cos(Date.now() * 0.01 + i) * 20;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(sparkleX, sparkleY, 2, 2);
+                }
             }
             
             // Draw player
             const player = gameState.player;
             drawPixelCharacter(player.x, player.y, player.color, true);
             
-            // Charging effect
+            // Enhanced charging effect
             if (player.charging) {
+                const glowIntensity = (player.power / player.maxPower) * 255;
+                ctx.shadowColor = `rgba(255, 215, 0, ${glowIntensity / 255})`;
+                ctx.shadowBlur = 15;
                 ctx.strokeStyle = '#FFD700';
                 ctx.lineWidth = 3;
                 ctx.strokeRect(player.x - 5, player.y - 5, player.width + 10, player.height + 10);
+                ctx.shadowBlur = 0;
+                
+                // Power particles
+                for (let i = 0; i < player.power / 10; i++) {
+                    const particleX = player.x + Math.random() * player.width;
+                    const particleY = player.y + Math.random() * player.height;
+                    ctx.fillStyle = `rgba(255, 215, 0, ${Math.random()})`;
+                    ctx.fillRect(particleX, particleY, 2, 2);
+                }
+            }
+            
+            // Draw foreground forest elements
+            drawForegroundTrees();
+        }
+
+        function drawForestBackground() {
+            // Draw distant mountains
+            ctx.fillStyle = '#4682B4';
+            ctx.beginPath();
+            ctx.moveTo(0, 150 - gameState.camera.y * 0.1);
+            ctx.lineTo(200, 100 - gameState.camera.y * 0.1);
+            ctx.lineTo(400, 130 - gameState.camera.y * 0.1);
+            ctx.lineTo(600, 80 - gameState.camera.y * 0.1);
+            ctx.lineTo(800, 120 - gameState.camera.y * 0.1);
+            ctx.lineTo(800, 600);
+            ctx.lineTo(0, 600);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw background trees (parallax effect)
+            for (let i = 0; i < 15; i++) {
+                const treeX = (i * 60) + Math.sin(i) * 20;
+                const treeY = 200 + Math.sin(i * 0.5) * 50 - gameState.camera.y * 0.3;
+                drawBackgroundTree(treeX, treeY, 0.7 + Math.sin(i) * 0.3);
+            }
+            
+            // Draw mid-ground trees
+            for (let i = 0; i < 10; i++) {
+                const treeX = (i * 80) + Math.cos(i) * 30;
+                const treeY = 300 + Math.cos(i * 0.7) * 40 - gameState.camera.y * 0.6;
+                drawBackgroundTree(treeX, treeY, 1.0 + Math.cos(i) * 0.2);
+            }
+            
+            // Add floating particles (leaves, dust)
+            drawFloatingParticles();
+        }
+
+        function drawBackgroundTree(x, y, scale) {
+            if (y < -100 || y > canvas.height + 100) return;
+            
+            const trunkWidth = 8 * scale;
+            const trunkHeight = 40 * scale;
+            const crownRadius = 25 * scale;
+            
+            // Tree trunk
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(x - trunkWidth/2, y, trunkWidth, trunkHeight);
+            
+            // Tree crown (multiple layers for depth)
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(x, y - crownRadius/2, crownRadius * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.arc(x - crownRadius/3, y - crownRadius/3, crownRadius * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(x + crownRadius/3, y - crownRadius/4, crownRadius * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawForegroundTrees() {
+            // Draw some foreground trees for depth
+            for (let i = 0; i < 5; i++) {
+                const treeX = (i * 150) + 50;
+                const treeY = 500 - gameState.camera.y * 0.9;
+                
+                if (treeY > -150 && treeY < canvas.height + 50) {
+                    // Large foreground tree
+                    ctx.fillStyle = '#654321';
+                    ctx.fillRect(treeX - 6, treeY, 12, 60);
+                    
+                    // Large tree crown
+                    ctx.fillStyle = '#006400';
+                    ctx.beginPath();
+                    ctx.arc(treeX, treeY - 20, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#228B22';
+                    ctx.beginPath();
+                    ctx.arc(treeX - 15, treeY - 10, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.beginPath();
+                    ctx.arc(treeX + 15, treeY - 15, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+
+        function drawFloatingParticles() {
+            const time = Date.now() * 0.001;
+            
+            for (let i = 0; i < 20; i++) {
+                const x = (i * 40) + Math.sin(time + i) * 100;
+                const y = (i * 30) + Math.cos(time + i * 0.7) * 50 - gameState.camera.y * 0.5;
+                
+                if (y > -10 && y < canvas.height + 10) {
+                    ctx.fillStyle = i % 3 === 0 ? '#90EE90' : '#98FB98';
+                    ctx.fillRect(x, y, 2, 2);
+                }
+            }
+        }
+
+        function drawFloatingHearts(x, y) {
+            const time = Date.now() * 0.003;
+            
+            for (let i = 0; i < 3; i++) {
+                const heartX = x + Math.sin(time + i) * 10;
+                const heartY = y + Math.cos(time + i * 0.8) * 8 - i * 8;
+                const alpha = (Math.sin(time + i) + 1) / 2;
+                
+                ctx.fillStyle = `rgba(255, 20, 147, ${alpha})`;
+                // Heart shape
+                ctx.fillRect(heartX, heartY, 3, 3);
+                ctx.fillRect(heartX + 4, heartY, 3, 3);
+                ctx.fillRect(heartX - 1, heartY + 3, 5, 3);
+                ctx.fillRect(heartX + 1, heartY + 6, 3, 2);
             }
         }
 
@@ -403,12 +574,12 @@
             requestAnimationFrame(gameLoop);
         }
 
-        function showGameOver() {
-            document.getElementById('gameOver').style.display = 'block';
-        }
-
         function showWinMessage() {
             document.getElementById('winMessage').style.display = 'block';
+        }
+
+        function showGameOver() {
+            document.getElementById('gameOver').style.display = 'block';
         }
 
         function restartGame() {
